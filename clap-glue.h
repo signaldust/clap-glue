@@ -180,7 +180,7 @@ namespace dust
     struct ClapExt_params
     {
         static void * check(const char * id)
-        { return (!strcmp(id, CLAP_EXT_LATENCY)) ? (void*) &ext : 0; }
+        { return (!strcmp(id, CLAP_EXT_PARAMS)) ? (void*) &ext : 0; }
 
     private:
         static const clap_plugin_params ext;
