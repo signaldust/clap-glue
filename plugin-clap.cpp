@@ -76,6 +76,7 @@ struct Test : ClapBasePlugin, ClapBaseGUI
         if(!ext) ext = ClapExt_audio_ports<Test>::check(id);
         if(!ext) ext = ClapExt_latency<Test>::check(id);
         if(!ext) ext = ClapExt_gui<Test>::check(id);
+        if(!ext) ext = ClapExt_note_name<Test>::check(id);
         
         return ext;
     }
@@ -97,6 +98,13 @@ struct Test : ClapBasePlugin, ClapBaseGUI
     }
 
     uint32_t plug_latency_get() { return 0; }
+
+    uint32_t plug_note_name_count() { return 0; }
+
+    bool plug_note_name_get(uint32_t index, clap_note_name_t *note_name)
+    {
+        return false;
+    }
 };
 
 clap_plugin_descriptor Test::plug_desc =

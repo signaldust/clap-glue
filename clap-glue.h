@@ -272,6 +272,34 @@ namespace dust
         .exec = ClapExt_thread_pool<Plugin>::_exec,
     };
 
+    // NoteName
+    template <typename Plugin>
+    struct ClapExt_note_name
+    {
+        static void * check(const char * id)
+        { return (!strcmp(id, CLAP_EXT_NOTE_NAME)) ? (void*) &ext : 0; }
+
+    private:
+        static const clap_plugin_note_name ext;
+        
+        static ClapWrapper<Plugin> * _cast(const clap_plugin *self)
+        { return ClapWrapper<Plugin>::_cast(self); }
+
+        static uint32_t _count(const clap_plugin *self)
+        { return _cast(self)->plugin.plug_note_name_count(); }
+        
+        static bool _get(const clap_plugin *self,
+            uint32_t index, clap_note_name_t *note_name)
+        { return _cast(self)->plugin.plug_note_name_get(index, note_name); }
+    };
+
+    template <typename Plugin>
+    const clap_plugin_note_name ClapExt_note_name<Plugin>::ext =
+    {
+        .count  = ClapExt_note_name<Plugin>::_count,
+        .get    = ClapExt_note_name<Plugin>::_get,
+    };
+
     // GUI
     template <typename Plugin>
     struct ClapExt_gui
