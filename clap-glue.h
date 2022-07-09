@@ -24,7 +24,8 @@
 //
 // The reference to ClapExt_Something<MyPluginType> here triggers the
 // generation of the extension table, so methods need only be implemented
-// when the extension is actually supported.
+// when the extension is actually supported. Non-null return value can be
+// returned to the host directly, otherwise query next extension.
 //
 // Finally declare a non-local factory wrapper for each plugin type:
 //
