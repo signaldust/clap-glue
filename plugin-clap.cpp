@@ -45,6 +45,7 @@ bool ClapBaseGUI::plug_gui_create(const char *api, bool is_floating)
     return true;
 }
 
+#if 0
 
 // TEST
 
@@ -71,10 +72,10 @@ struct Test : ClapBasePlugin, ClapBaseGUI
 
     void* plug_get_extension(const char *id)
     {
-        void * ext = ClapExt_NotePorts<Test>::check(id);
-        if(!ext) ext = ClapExt_AudioPorts<Test>::check(id);
-        if(!ext) ext = ClapExt_Latency<Test>::check(id);
-        if(!ext) ext = ClapExt_GUI<Test>::check(id);
+        void * ext = ClapExt_note_ports<Test>::check(id);
+        if(!ext) ext = ClapExt_audio_ports<Test>::check(id);
+        if(!ext) ext = ClapExt_latency<Test>::check(id);
+        if(!ext) ext = ClapExt_gui<Test>::check(id);
         
         return ext;
     }
@@ -115,3 +116,5 @@ clap_plugin_descriptor Test::plug_desc =
 };
 
 static ClapFactory<Test>  test_factory;
+
+#endif

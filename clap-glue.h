@@ -20,7 +20,7 @@
 // with plug_ or plug_some_ext_ and query extensions in plug_get_extension()
 // by calling:
 //
-//   ext = ClapExt_Something<MyPluginType>::check(id);
+//   ext = ClapExt_some_ext<MyPluginType>::check(id);
 //
 // The reference to ClapExt_Something<MyPluginType> here triggers the
 // generation of the extension table, so methods need only be implemented
@@ -95,7 +95,7 @@ namespace dust
     
     // Note ports
     template <typename Plugin>
-    struct ClapExt_NotePorts
+    struct ClapExt_note_ports
     {
         static void * check(const char * id)
         { return (!strcmp(id, CLAP_EXT_NOTE_PORTS)) ? (void*) &ext : 0; }
@@ -115,15 +115,15 @@ namespace dust
     };
     
     template <typename Plugin>
-    const clap_plugin_note_ports ClapExt_NotePorts<Plugin>::ext =
+    const clap_plugin_note_ports ClapExt_note_ports<Plugin>::ext =
     {
-        .count  = ClapExt_NotePorts<Plugin>::_count,
-        .get    = ClapExt_NotePorts<Plugin>::_get,
+        .count  = ClapExt_note_ports<Plugin>::_count,
+        .get    = ClapExt_note_ports<Plugin>::_get,
     };
 
     // Audio ports
     template <typename Plugin>
-    struct ClapExt_AudioPorts
+    struct ClapExt_audio_ports
     {
         static void * check(const char * id)
         { return (!strcmp(id, CLAP_EXT_AUDIO_PORTS)) ? (void*) &ext : 0; }
@@ -143,15 +143,15 @@ namespace dust
     };
     
     template <typename Plugin>
-    const clap_plugin_audio_ports ClapExt_AudioPorts<Plugin>::ext =
+    const clap_plugin_audio_ports ClapExt_audio_ports<Plugin>::ext =
     {
-        .count  = ClapExt_AudioPorts<Plugin>::_count,
-        .get    = ClapExt_AudioPorts<Plugin>::_get,
+        .count  = ClapExt_audio_ports<Plugin>::_count,
+        .get    = ClapExt_audio_ports<Plugin>::_get,
     };
 
     // Latency
     template <typename Plugin>
-    struct ClapExt_Latency
+    struct ClapExt_latency
     {
         static void * check(const char * id)
         { return (!strcmp(id, CLAP_EXT_LATENCY)) ? (void*) &ext : 0; }
@@ -167,14 +167,14 @@ namespace dust
     };
     
     template <typename Plugin>
-    const clap_plugin_latency ClapExt_Latency<Plugin>::ext =
+    const clap_plugin_latency ClapExt_latency<Plugin>::ext =
     {
-        .get    = ClapExt_Latency<Plugin>::_get,
+        .get    = ClapExt_latency<Plugin>::_get,
     };
 
     // Params
     template <typename Plugin>
-    struct ClapExt_Params
+    struct ClapExt_params
     {
         static void * check(const char * id)
         { return (!strcmp(id, CLAP_EXT_LATENCY)) ? (void*) &ext : 0; }
@@ -209,14 +209,14 @@ namespace dust
     };
     
     template <typename Plugin>
-    const clap_plugin_params ClapExt_Params<Plugin>::ext =
+    const clap_plugin_params ClapExt_params<Plugin>::ext =
     {
-        .count          = ClapExt_Params<Plugin>::_count,
-        .get_info       = ClapExt_Params<Plugin>::_get_info,
-        .get_value      = ClapExt_Params<Plugin>::_get_value,
-        .value_to_text  = ClapExt_Params<Plugin>::_value_to_text,
-        .text_to_value  = ClapExt_Params<Plugin>::_text_to_value,
-        .flush          = ClapExt_Params<Plugin>::_flush,
+        .count          = ClapExt_params<Plugin>::_count,
+        .get_info       = ClapExt_params<Plugin>::_get_info,
+        .get_value      = ClapExt_params<Plugin>::_get_value,
+        .value_to_text  = ClapExt_params<Plugin>::_value_to_text,
+        .text_to_value  = ClapExt_params<Plugin>::_text_to_value,
+        .flush          = ClapExt_params<Plugin>::_flush,
     };
 
     // State
@@ -246,9 +246,32 @@ namespace dust
         .load = ClapExt_State<Plugin>::_load,
     };
 
+    // ThreadPool
+    template <typename Plugin>
+    struct ClapExt_thread_pool
+    {
+        static void * check(const char * id)
+        { return (!strcmp(id, CLAP_EXT_THREAD_POOL)) ? (void*) &ext : 0; }
+
+    private:
+        static const clap_plugin_thread_pool ext;
+        
+        static ClapWrapper<Plugin> * _cast(const clap_plugin *self)
+        { return ClapWrapper<Plugin>::_cast(self); }
+
+        static void _exec(const clap_plugin *self, uint32_t task_index)
+        { _cast(self)->plugin.plug_thread_pool_exec(index); }
+    };
+
+    template <typename Plugin>
+    const clap_plugin_thread_pool ClapExt_thread_pool<Plugin>::ext =
+    {
+        .exec = ClapExt_thread_pool<Plugin>::_exec,
+    };
+
     // GUI
     template <typename Plugin>
-    struct ClapExt_GUI
+    struct ClapExt_gui
     {
         static void * check(const char * id)
         { return (!strcmp(id, CLAP_EXT_GUI)) ? (void*) &ext : 0; }
@@ -308,23 +331,23 @@ namespace dust
     };
     
     template <typename Plugin>
-    const clap_plugin_gui ClapExt_GUI<Plugin>::ext =
+    const clap_plugin_gui ClapExt_gui<Plugin>::ext =
     {
-        .is_api_supported   = ClapExt_GUI<Plugin>::_is_api_supported,
-        .get_preferred_api  = ClapExt_GUI<Plugin>::_get_preferred_api,
-        .create             = ClapExt_GUI<Plugin>::_create,
-        .destroy            = ClapExt_GUI<Plugin>::_destroy,
-        .set_scale          = ClapExt_GUI<Plugin>::_set_scale,
-        .get_size           = ClapExt_GUI<Plugin>::_get_size,
-        .can_resize         = ClapExt_GUI<Plugin>::_can_resize,
-        .get_resize_hints   = ClapExt_GUI<Plugin>::_get_resize_hints,
-        .adjust_size        = ClapExt_GUI<Plugin>::_adjust_size,
-        .set_size           = ClapExt_GUI<Plugin>::_set_size,
-        .set_parent         = ClapExt_GUI<Plugin>::_set_parent,
-        .set_transient      = ClapExt_GUI<Plugin>::_set_transient,
-        .suggest_title      = ClapExt_GUI<Plugin>::_suggest_title,
-        .show               = ClapExt_GUI<Plugin>::_show,
-        .hide               = ClapExt_GUI<Plugin>::_hide,
+        .is_api_supported   = ClapExt_gui<Plugin>::_is_api_supported,
+        .get_preferred_api  = ClapExt_gui<Plugin>::_get_preferred_api,
+        .create             = ClapExt_gui<Plugin>::_create,
+        .destroy            = ClapExt_gui<Plugin>::_destroy,
+        .set_scale          = ClapExt_gui<Plugin>::_set_scale,
+        .get_size           = ClapExt_gui<Plugin>::_get_size,
+        .can_resize         = ClapExt_gui<Plugin>::_can_resize,
+        .get_resize_hints   = ClapExt_gui<Plugin>::_get_resize_hints,
+        .adjust_size        = ClapExt_gui<Plugin>::_adjust_size,
+        .set_size           = ClapExt_gui<Plugin>::_set_size,
+        .set_parent         = ClapExt_gui<Plugin>::_set_parent,
+        .set_transient      = ClapExt_gui<Plugin>::_set_transient,
+        .suggest_title      = ClapExt_gui<Plugin>::_suggest_title,
+        .show               = ClapExt_gui<Plugin>::_show,
+        .hide               = ClapExt_gui<Plugin>::_hide,
     };
 
     // see ClapFactory
