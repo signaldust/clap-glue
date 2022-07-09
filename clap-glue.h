@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include "clap/include/clap/clap.h"
+#include "clap/clap.h"
 
 #include <cstring>
 
@@ -190,22 +190,22 @@ namespace dust
 
         static bool _get_info(const clap_plugin *self,
             uint32_t index, clap_param_info *info)
-        { return _cast(self)->plugin.plug_param_get_info(index, info); }
+        { return _cast(self)->plugin.plug_params_get_info(index, info); }
 
         static bool _get_value(const clap_plugin *self, clap_id id, double *value)
-        { return _cast(self)->plugin.plug_param_get_value(id, value); }
+        { return _cast(self)->plugin.plug_params_get_value(id, value); }
 
         static bool _value_to_text(const clap_plugin *self,
             clap_id id, double val, char *txt, uint32_t sz)
-        { return _cast(self)->plugin.plug_param_value_to_text(id, val, txt, sz); }
+        { return _cast(self)->plugin.plug_params_value_to_text(id, val, txt, sz); }
         
         static bool _text_to_value(const clap_plugin *self,
             clap_id id, const char *txt, double *val)
-        { return _cast(self)->plugin.plug_param_text_to_value(id, txt, val); }
+        { return _cast(self)->plugin.plug_params_text_to_value(id, txt, val); }
 
         static void _flush(const clap_plugin *self,
             const clap_input_events *in, const clap_output_events *out)
-        { return _cast(self)->plugin.plug_param_flush(in, out); }
+        { return _cast(self)->plugin.plug_params_flush(in, out); }
     };
     
     template <typename Plugin>
@@ -217,6 +217,33 @@ namespace dust
         .value_to_text  = ClapExt_Params<Plugin>::_value_to_text,
         .text_to_value  = ClapExt_Params<Plugin>::_text_to_value,
         .flush          = ClapExt_Params<Plugin>::_flush,
+    };
+
+    // State
+    template <typename Plugin>
+    struct ClapExt_State
+    {
+        static void * check(const char * id)
+        { return (!strcmp(id, CLAP_EXT_STATE)) ? (void*) &ext : 0; }
+
+    private:
+        static const clap_plugin_state ext;
+        
+        static ClapWrapper<Plugin> * _cast(const clap_plugin *self)
+        { return ClapWrapper<Plugin>::_cast(self); }
+
+        static bool _save(const clap_plugin *self, const clap_ostream *stream)
+        { return _cast(self)->plugin.plug_state_save(stream); }
+        
+        static bool _load(const clap_plugin *self, const clap_istream *stream)
+        { return _cast(self)->plugin.plug_state_load(stream); }
+    };
+
+    template <typename Plugin>
+    const clap_plugin_state ClapExt_State<Plugin>::ext =
+    {
+        .save = ClapExt_State<Plugin>::_save,
+        .load = ClapExt_State<Plugin>::_load,
     };
 
     // GUI
