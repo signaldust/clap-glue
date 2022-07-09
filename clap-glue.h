@@ -1,4 +1,6 @@
 
+/* Copyright (C) 2022 pihlaja@signaldust.com, use as you please, no warranty */
+
 #pragma once
 
 #include "clap/clap.h"

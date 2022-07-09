@@ -1,4 +1,6 @@
 
+/* Copyright (C) 2022 pihlaja@signaldust.com, use as you please, no warranty */
+
 #include "clap-glue.h"
 
 // The mundate details of entry-point and factories..
