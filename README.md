@@ -1,6 +1,6 @@
 # CLAP glue-code addon for dust-toolkit
 
-** this is very much 'work-in-progress' and has not been properly tested **
+**this is very much 'work-in-progress' and has not been properly tested yet**
 
 To use this with [dust-toolkit](https://github.com/signaldust/dust-toolkit):
 ```
