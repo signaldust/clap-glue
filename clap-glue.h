@@ -31,7 +31,7 @@
 //   static ClapFactory<MyPluginType> myplug_factory;
 //
 // This will automatically register the new plugin type as one of the plugins
-// that can be instantiated by the CLAP entry point in plugin-clap-glue.cpp
+// that can be instantiated by the CLAP entry point in clap-glue.cpp
 // 
 namespace dust
 {
