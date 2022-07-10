@@ -31,15 +31,11 @@ bool ClapBaseGUI::plug_gui_get_preferred_api(const char **api, bool *is_floating
 
 bool ClapBaseGUI::plug_gui_create(const char *api, bool is_floating)
 {
-        DUST_TRACE
     if(strcmp(api, clap_gui_platform_api)) return false;
-            DUST_TRACE
 
     _gui_data.hostGUI = (const clap_host_gui*)
-        _gui_data.host->get_extension(_gui_data.host, CLAP_EXT_PARAMS);
-            DUST_TRACE
+        _gui_data.host->get_extension(_gui_data.host, CLAP_EXT_GUI);
     
     plugin_editor.computeSize(_gui_data.sizeX, _gui_data.sizeY);
-            DUST_TRACE
     return true;
 }
