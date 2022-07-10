@@ -10,39 +10,100 @@
 namespace dust
 {
 
-    // Some basic stuff that can often be left empty.
+    // Bunch of boring sanity checking.. :)
+#ifdef _WIN32
+    static const char * clap_gui_platform_api = CLAP_WINDOW_API_WIN32;
+#endif
+#ifdef __APPLE__
+    static const char * clap_gui_platform_api = CLAP_WINDOW_API_COCOA;
+#endif
+
+    // Some basic stuff ...
     //
     // Eventually this should probably implement some basic parameter handling?
     //
-    struct ClapBasePlugin
+    struct ClapBase : WindowDelegate
     {
+        struct {
+            const clap_host         *host;
+            const clap_host_params  *host_params;
+            const clap_host_gui     *host_gui;      // loaded by ClapBaseGUI
+        } clap = {};
+
+        Panel   plugin_editor;  // Top level editor Panel; use as a parent.
+        
+        ClapBase(const clap_host * _host)
+        {
+            clap.host = _host;
+            
+            plugin_editor.style.rule = LayoutStyle::FILL;
+        }
+
+        bool plug_init()
+        {
+            clap.host_params = (const clap_host_params*)
+                clap.host->get_extension(clap.host, CLAP_EXT_PARAMS);
+                
+            clap.host_gui = (const clap_host_gui*)
+                clap.host->get_extension(clap.host, CLAP_EXT_GUI);
+                
+            return true;
+        }
         void plug_deactivate() {}
         bool plug_start_processing() { return true; }
         bool plug_stop_processing() { return true; }
         void plug_on_main_thread() {}
-    };
-
-    // Implementation of CLAP 'gui' extension for dust-toolkit.
-    //
-    // The idea is that all one needs to do is make this a base-class of the
-    // plugin class and then use 'plugin_editor' as the parent for the GUI.
-    //
-    // The wrapper theoretically takes care of the rest..
-    //
-    struct ClapBaseGUI : WindowDelegate
-    {
-        Panel   plugin_editor;  // Top level editor Panel; use as a parent.
-
-        ClapBaseGUI(const clap_host * host)
+        
+        // FIXME: make this support any number of ports
+        uint32_t plug_audio_ports_count(bool input) { return 1; }
+        bool plug_audio_ports_get(
+            uint32_t index, bool input, clap_audio_port_info * info)
         {
-            plugin_editor.style.rule = LayoutStyle::FILL;
-            _gui_data.host = host;
+            info->id = index | (input ? 0 : 0x10000);
+        
+            sprintf(info->name, "%s %d", input ? "Input" : "Output", index + 1);
+            info->flags = CLAP_AUDIO_PORT_REQUIRES_COMMON_SAMPLE_SIZE;
+            if(index == 0) info->flags |= CLAP_AUDIO_PORT_IS_MAIN;
+        
+            info->channel_count = 2;
+            info->port_type = CLAP_PORT_STEREO;
+            info->in_place_pair = CLAP_INVALID_ID;
+    
+            return true;
+        }
+
+        // FIXME: ...
+        uint32_t plug_note_ports_count(bool input) { return 0; }
+        bool plug_note_ports_get(
+            uint32_t index, bool input, clap_note_port_info * info)
+        {
+            return false;
+        }
+
+        // GUI
+        
+        bool plug_gui_is_api_supported(const char *api, bool is_floating)
+        {
+            if(is_floating) return false;   // refuse floating for now
+            if(!strcmp(api, clap_gui_platform_api)) return true;
+            return false;
         }
         
-        bool plug_gui_is_api_supported(const char *api, bool is_floating);
-        bool plug_gui_get_preferred_api(const char **api, bool *is_floating);
-        bool plug_gui_create(const char *api, bool is_floating);
+        bool plug_gui_get_preferred_api(const char **api, bool *is_floating)
+        {
+            *api = clap_gui_platform_api;
+            *is_floating = false;
+            return true;
+        }
 
+        bool plug_gui_create(const char *api, bool is_floating)
+        {
+            if(strcmp(api, clap_gui_platform_api)) return false;
+            
+            plugin_editor.computeSize(_gui_data.sizeX, _gui_data.sizeY);
+            return true;
+        }
+        
         void plug_gui_destroy()
         {
             // should never happen, but just in case..
@@ -89,12 +150,12 @@ namespace dust
             {
                 _gui_data.scale = win->getScale();
 
-                if(!_gui_data.hostGUI) return;
+                if(!clap.host_gui) return;
 
                 int szX = (_gui_data.sizeX * _gui_data.scale) / 100;
                 int szY = (_gui_data.sizeY * _gui_data.scale) / 100;
             
-                _gui_data.hostGUI->request_resize(_gui_data.host, szX, szY);
+                clap.host_gui->request_resize(clap.host, szX, szY);
             };
 
             return true;
@@ -115,12 +176,7 @@ namespace dust
             uint32_t    sizeX   = 0;
             uint32_t    sizeY   = 0;
             uint32_t    scale   = 100;
-            
             void                *parent     = 0;
-            
-            const clap_host     *host       = 0;
-            const clap_host_gui *hostGUI    = 0;
-            
         } _gui_data;
     };
 
