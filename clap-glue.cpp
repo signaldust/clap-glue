@@ -59,7 +59,7 @@ static const void *entry_get_factory(const char *factory_id)
 
 CLAP_EXPORT const clap_plugin_entry clap_entry =
 {
-    .clap_version   = CLAP_VERSION_INIT,
+    .clap_version   = CLAP_VERSION,
     .init           = entry_init,
     .deinit         = entry_deinit,
     .get_factory    = entry_get_factory,
