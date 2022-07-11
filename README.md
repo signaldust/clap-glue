@@ -6,11 +6,14 @@ The basic API glue in `clap-glue.h` and `clap-glue.cpp` is completely self-conta
 so you can take these two files and use them without my toolkit just fine.
 
 The basic idea with the low-level wrappers is to simply take the CLAP API as-is
-while allowing the plugin to be a proper C++ object.
+while allowing the plugin to be a proper C++ object (ie. the wrappers take care of
+casting the `clap_plugin*` into an actual `this` pointer).
 
 The pointer-tables are generated automatically with template expansion and as long
 as the plugin methods are not virtual, the wrapper methods should be zero-cost
-(ie. can be inlined or at least turned into direct tail-calls).
+(ie. can be inlined or at least turned into direct tail-calls). You can certainly
+use virtual methods too, but then they'll have to go through the vtables which is
+specifically what this design tries to avoid.
 
 The glue also supports multiple plugins in the same binary without having to maintain
 any centralized list of plugins (ie. just link them all together and that's it).
