@@ -13,7 +13,7 @@ The pointer-tables are generated automatically with template expansion and as lo
 as the plugin methods are not virtual, the wrapper methods should be zero-cost
 (ie. can be inlined or at least turned into direct tail-calls). You can certainly
 use virtual methods too, but then they'll have to go through the vtables which is
-specifically what this design tries to avoid.
+specifically what this design tries to avoid. See `clap-glue.h` for more details.
 
 The glue also supports multiple plugins in the same binary without having to maintain
 any centralized list of plugins (ie. just link them all together and that's it).
