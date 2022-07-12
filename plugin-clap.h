@@ -30,6 +30,13 @@ namespace dust
             const clap_host_gui     *host_gui;      // loaded by ClapBaseGUI
         } clap = {};
 
+        struct {
+            // Names of ports - first one is always main
+            std::vector<const char*>    audioIn;
+            std::vector<const char*>    audioOut;
+            
+        } properties;
+
         Panel   plugin_editor;  // Top level editor Panel; use as a parent.
         
         ClapBase(const clap_host * _host)
@@ -55,13 +62,21 @@ namespace dust
         void plug_on_main_thread() {}
         
         // FIXME: make this support any number of ports
-        uint32_t plug_audio_ports_count(bool input) { return 1; }
+        uint32_t plug_audio_ports_count(bool input)
+        {
+            return input ? properties.audioIn.size() : properties.audioOut.size();
+        }
         bool plug_audio_ports_get(
             uint32_t index, bool input, clap_audio_port_info * info)
         {
+            auto & ports = input ? properties.audioIn : properties.audioOut;
+
+            if(index >= ports.size()) return false;
+            
             info->id = index | (input ? 0 : 0x10000);
         
-            sprintf(info->name, "%s %d", input ? "Input" : "Output", index + 1);
+            strcpy(info->name, ports[index]);
+            
             info->flags = CLAP_AUDIO_PORT_REQUIRES_COMMON_SAMPLE_SIZE;
             if(index == 0) info->flags |= CLAP_AUDIO_PORT_IS_MAIN;
         
