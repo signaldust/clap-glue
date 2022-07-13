@@ -3,14 +3,14 @@
 
 #include "clap-glue.h"
 #include "dust/gui/window.h"
+#include "dust/thread/thread.h"
+#include "dust/core/hash.h"
 
 // This wrapper implements dust-toolkit specific functionality.
 //
 // For the toolkit-independent base-wrappers, see clap-glue.h
 namespace dust
 {
-
-    // Bunch of boring sanity checking.. :)
 #ifdef _WIN32
     static const char * clap_gui_platform_api = CLAP_WINDOW_API_WIN32;
 #endif
@@ -18,12 +18,71 @@ namespace dust
     static const char * clap_gui_platform_api = CLAP_WINDOW_API_COCOA;
 #endif
 
+    // This is mostly for internal GUI -> DSP use below.
+    struct ClapEventQueue
+    {
+        // Send event
+        template <typename T>
+        bool send(T & ev)
+        {
+            clap_event_header * header = &ev->header;   // typecheck
+            return queue.send((uint8_t*)header, header->size);
+        }
+
+        // Receive all events from the GUI
+        template <typename Fn> void recv(Fn && fn) { recv(fn); }
+        template <typename Fn> void recv(Fn & fn)
+        {
+            unsigned size = queue.recv(recv_buf, queue_size);
+            unsigned offset = 0;
+            while(offset < size)
+            {
+                auto * header = (clap_event_header*) (recv_buf + offset);
+                offset += header->size;
+                fn(header);
+            }
+            // assert(size == offset);
+        }
+
+    private:
+        static const unsigned queue_size = 4096;
+        
+        RTQueue<uint8_t, queue_size>    queue;
+        uint8_t                         recv_buf[queue_size];
+    };
+
+    struct AudioParam
+    {
+        clap_param_info_flags   clap_flags;
+
+        // FIXME: do we want std::string here?
+        const char  *name   = "<param>";
+        const char  *module = "";
+
+        // FIXME: this is some useless copying, but .. idk..
+        std::function<std::string(float)>   value_to_text
+            = [](float v) { return strf("%.3f", v); };
+            
+        std::function<float(const char *)>  text_to_value
+            = [](const char * txt) { return parseNumeric(txt); };
+            
+        bool        inGesture = false;
+        
+        float       value;
+        float       value_default;
+
+        // helper
+        static float parseNumeric(const char * txt)
+        { float v; sscanf(txt, "%f", &v); return v; }
+    };
+
     // Some basic stuff ...
     //
     // Eventually this should probably implement some basic parameter handling?
     //
     struct ClapBase : WindowDelegate
     {
+        // Extension interfaces that we currently make use of..
         struct {
             const clap_host         *host;
             const clap_host_params  *host_params;
@@ -32,18 +91,25 @@ namespace dust
 
         struct {
             // Names of ports - first one is always main
+            // FIXME: might want to specify more stuff (eg. nChannels?)
             std::vector<const char*>    audioIn;
             std::vector<const char*>    audioOut;
-            
         } properties;
 
-        Panel   plugin_editor;  // Top level editor Panel; use as a parent.
-        
+        Panel           editor;     // Top level editor Panel; use as a parent.
+        ClapEventQueue  gui_to_dsp; // GUI to DSP event queue
+
+        // references to parameters
+        std::vector<AudioParam*>    params;
+
+        // short-hand for requesting flush
+        void params_flush()
+        { if(clap.host_params) clap.host_params->request_flush(clap.host); }
+
         ClapBase(const clap_host * _host)
         {
             clap.host = _host;
-            
-            plugin_editor.style.rule = LayoutStyle::FILL;
+            editor.style.rule = LayoutStyle::FILL;
         }
 
         bool plug_init()
@@ -60,6 +126,95 @@ namespace dust
         bool plug_start_processing() { return true; }
         bool plug_stop_processing() { return true; }
         void plug_on_main_thread() {}
+
+        // parameter support
+        uint32_t plug_params_count() { return params.size(); }
+
+        bool plug_params_get_info(uint32_t index, clap_param_info *info)
+        {
+            if(index >= params.size()) return false;
+
+            auto * p = params[index];
+            
+            info->id = index;           // FIXME: make stable or keep index?
+            info->flags = p->clap_flags;
+            info->cookie = (void*) p;
+            
+            strncpy(info->name, p->name, CLAP_NAME_SIZE);
+            info->name[CLAP_NAME_SIZE-1] = 0;
+
+            strncpy(info->module, p->module, CLAP_PATH_SIZE);
+            info->module[CLAP_PATH_SIZE-1] = 0;
+
+            info->min_value = 0;
+            info->max_value = 1;
+            info->default_value = p->value_default;
+
+            return true;
+        }
+
+        bool plug_params_get_value(clap_id id, double *value)
+        {
+            if(id >= params.size()) return false;
+            auto * p = params[id];
+            memfence();
+            *value = p->value;
+            memfence();
+            return true;
+        }
+
+        bool plug_params_value_to_text(clap_id id, double v, char *txt, uint32_t size)
+        {
+            if(id >= params.size()) return false;
+
+            auto s = params[id]->value_to_text(v);
+            
+            strncpy(txt, s.c_str(), size);
+            txt[size-1] = 0;
+
+            return true;
+        }
+
+        bool plug_params_text_to_value(clap_id id, const char * txt, double *value)
+        {
+            if(id >= params.size()) return false;
+            *value = params[id]->text_to_value(txt);
+            return true;
+        }
+
+        void plug_params_flush(
+            const clap_input_events *in, const clap_output_events *out)
+        {
+            auto parse = [this](const clap_event_header * header)
+            {
+                // FIXME: this is "supposedly" safe.. :P
+                if(header->space_id != CLAP_CORE_EVENT_SPACE_ID
+                || header->type != CLAP_EVENT_PARAM_VALUE) return;
+
+                auto * ev = (clap_event_param_value*) header;
+
+                // we don't allow any of this for automation
+                if(ev->note_id != -1 || ev->port_index != -1
+                || ev->channel != -1 || ev->key != -1) return;
+
+                auto * p = params[ev->param_id];
+                p->value = ev->value;
+            };
+
+            if(in)
+            {
+                auto inputSize = in->size(in);
+                for(int i = 0; i < inputSize; ++i)
+                {
+                    parse(in->get(in, i));
+                }
+            }
+
+            // parse value events, then send everything to host?
+            gui_to_dsp.recv([&](const clap_event_header * ev)
+            { parse(ev); out->try_push(out, ev); });
+        }
+        
         
         // FIXME: make this support any number of ports
         uint32_t plug_audio_ports_count(bool input)
@@ -96,7 +251,6 @@ namespace dust
         }
 
         // GUI
-        
         bool plug_gui_is_api_supported(const char *api, bool is_floating)
         {
             if(is_floating) return false;   // refuse floating for now
@@ -115,14 +269,14 @@ namespace dust
         {
             if(strcmp(api, clap_gui_platform_api)) return false;
             
-            plugin_editor.computeSize(_gui_data.sizeX, _gui_data.sizeY);
+            editor.computeSize(_gui_data.sizeX, _gui_data.sizeY);
             return true;
         }
         
         void plug_gui_destroy()
         {
             // should never happen, but just in case..
-            auto * win = plugin_editor.getWindow();
+            auto * win = editor.getWindow();
             if(win) win->closeWindow();
         }
 
@@ -152,13 +306,13 @@ namespace dust
 
         bool plug_gui_show()
         {
-            if(plugin_editor.getWindow()) return false;
+            if(editor.getWindow()) return false;
     
             int szX = (_gui_data.sizeX * _gui_data.scale) / 100;
             int szY = (_gui_data.sizeY * _gui_data.scale) / 100;
         
             auto * win = createWindow(*this, _gui_data.parent, szX, szY);
-            plugin_editor.setParent(win);
+            editor.setParent(win);
             
             win->setScale(_gui_data.scale);
             win->onScaleChange = [this, win]()
@@ -178,7 +332,7 @@ namespace dust
         
         bool plug_gui_hide()
         {
-            auto * win = plugin_editor.getWindow();
+            auto * win = editor.getWindow();
             if(!win) return false;
             
             win->closeWindow();
