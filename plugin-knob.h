@@ -108,6 +108,22 @@ namespace dust
             }
         }
 
+        void ev_update()
+        {
+            if(!param) return;
+
+            memfence();
+            float v = param->value;
+            memfence();
+            
+            if(v != value)
+            {
+                value = v;
+                redraw(true);
+                onValueChanged();
+            }
+        }
+
     protected:
         bool    hover = false;      // hover-state
         bool    inDrag = false;     // drag-state
