@@ -27,7 +27,7 @@ namespace dust
     {
         // default to automatable for now
         clap_param_info_flags   clap_flags = CLAP_PARAM_IS_AUTOMATABLE;
-        clap_id                 id;
+        clap_id                 id  = -1;   // filled by register_param
 
         // FIXME: do we want std::string here?
         const char  *name   = "<param>";

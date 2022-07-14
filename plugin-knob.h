@@ -112,9 +112,9 @@ namespace dust
         {
             if(!param) return;
 
-            memfence();
+            memfence_acq();
             float v = param->value;
-            memfence();
+            memfence_rel();
             
             if(v != value)
             {
